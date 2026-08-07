@@ -1,0 +1,17 @@
+# SentinelXAI — top-level application configuration.
+# Values here are defaults; anything environment-specific belongs in .env
+# (see .env.example) and is merged on top of this file by src/sentinelxai/config.py.
+
+project:
+  name: SentinelXAI
+  version: "0.1.0"
+
+paths:
+  data_raw_dir: data/raw/MachineLearningCVE
+  data_interim_dir: data/interim
+  data_processed_dir: data/processed
+  models_dir: models
+  logs_dir: logs
+  reports_dir: reports
+
+random_seed: 42

@@ -1,0 +1,59 @@
+# Dataset engineering configuration for CICIDS2017 (MachineLearningCVE variant).
+# Referenced by src/sentinelxai/data/*.py — never hardcode these values in code.
+
+raw_files:
+  - Monday-WorkingHours.pcap_ISCX.csv
+  - Tuesday-WorkingHours.pcap_ISCX.csv
+  - Wednesday-workingHours.pcap_ISCX.csv
+  - Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv
+  - Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv
+  - Friday-WorkingHours-Morning.pcap_ISCX.csv
+  - Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv
+  - Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv
+
+# Raw files ARE valid UTF-8. However, the "Web Attack" labels already
+# contain the Unicode replacement character (U+FFFD) baked into the source
+# data itself (the original en-dash was lost upstream when CICIDS2017 was
+# published) -- this is a known quirk, not a read error. Label
+# normalization rewrites it to a clean ASCII form; see
+# schema.py::normalize_label.
+raw_file_encoding: utf-8
+
+label_column: Label
+
+# CICIDS2017's raw header repeats "Fwd Header Length" at columns 35 and 56
+# with identical values. We keep the first occurrence and drop the second.
+duplicate_columns:
+  - name: "Fwd Header Length"
+    keep: first
+
+split:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+  stratify: true
+  # Classes with fewer rows than this cannot be split 70/15/15 while
+  # guaranteeing at least one sample in val and test. They are NEVER
+  # dropped — see split.py for the documented fallback strategy — but
+  # they are flagged in the data-quality report for transparency.
+  rare_class_floor: 20
+
+cleaning:
+  # Columns with known ±Infinity values caused by division-by-zero
+  # (e.g. Flow Bytes/s when Flow Duration == 0).
+  infinity_columns:
+    - "Flow Bytes/s"
+    - "Flow Packets/s"
+  # After ±Infinity -> NaN, any row containing a NaN in ANY column is
+  # dropped (in practice this is almost entirely rows affected by the
+  # infinity replacement above, but the check is deliberately global as a
+  # safety net against unrelated parsing issues). Counted and reported —
+  # never silently discarded.
+  nan_strategy: drop_row
+  drop_duplicate_rows: true
+
+# Columns known from the audit to risk label leakage. This raw CICIDS2017
+# variant does NOT include Flow ID / Source IP / Destination IP / Timestamp
+# (unlike the full PCAP-derived CSVs), so this list is currently empty —
+# kept here so the check is explicit and versioned rather than assumed.
+leak_risk_columns: []

@@ -1,0 +1,55 @@
+# --- Data (never commit raw/interim/processed datasets) ---
+data/raw/**
+data/interim/**
+data/processed/**
+data/external/**
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!data/external/.gitkeep
+# Exception: the data quality report is small (~8KB) and is itself a
+# reviewable artifact (evidence of the pipeline's actual output), unlike
+# the multi-hundred-MB parquet splits it summarizes.
+!data/processed/data_quality_report.json
+
+# --- Models / artifacts ---
+models/**
+!models/.gitkeep
+*.pkl
+*.joblib
+
+# --- Logs ---
+logs/*.log
+# reports/ (EDA figures, summaries, feature stats) is intentionally NOT
+# ignored — those artifacts are small (<400KB total) and are themselves
+# reviewable evidence of work done, unlike the raw/processed data.
+
+# --- Secrets ---
+.env
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Claude Code local tooling state (machine-specific, not project source) ---
+.claude/settings.local.json

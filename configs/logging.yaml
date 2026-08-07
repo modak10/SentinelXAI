@@ -1,0 +1,47 @@
+# Standard library logging.config.dictConfig schema.
+# Loaded by src/sentinelxai/logging_setup.py — never use print() (see AGENT.md).
+
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  standard:
+    format: "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: standard
+    stream: ext://sys.stdout
+
+  application_file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: standard
+    filename: logs/application.log
+    maxBytes: 5242880 # 5 MB
+    backupCount: 3
+    encoding: utf-8
+
+  error_file:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: standard
+    filename: logs/error.log
+    maxBytes: 5242880
+    backupCount: 3
+    encoding: utf-8
+
+root:
+  level: DEBUG
+  handlers: [console, application_file, error_file]
+
+loggers:
+  sentinelxai.data:
+    level: DEBUG
+    handlers: [console, application_file, error_file]
+    propagate: false
+    # Data-pipeline events are additionally routed to their own file by
+    # logging_setup.py at runtime (logs/training.log covers Milestone 2+).

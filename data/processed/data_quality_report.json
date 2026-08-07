@@ -1,0 +1,189 @@
+{
+  "generated_at_utc": "2026-08-07T13:43:50.433739+00:00",
+  "dataset": "CICIDS2017 (MachineLearningCVE)",
+  "source_files": [
+    "Monday-WorkingHours.pcap_ISCX.csv",
+    "Tuesday-WorkingHours.pcap_ISCX.csv",
+    "Wednesday-workingHours.pcap_ISCX.csv",
+    "Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv",
+    "Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
+    "Friday-WorkingHours-Morning.pcap_ISCX.csv",
+    "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
+    "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv"
+  ],
+  "cleaning": {
+    "rows_before": 2830743,
+    "infinity_values_replaced": 4376,
+    "rows_dropped_nan": 2867,
+    "rows_dropped_duplicate": 307078,
+    "rows_after": 2520798,
+    "label_values_normalized": 2143
+  },
+  "label_summary": {
+    "total_rows": 2520798,
+    "num_classes": 15,
+    "class_counts": {
+      "BENIGN": 2095057,
+      "DoS Hulk": 172846,
+      "DDoS": 128014,
+      "PortScan": 90694,
+      "DoS GoldenEye": 10286,
+      "FTP-Patator": 5931,
+      "DoS slowloris": 5385,
+      "DoS Slowhttptest": 5228,
+      "SSH-Patator": 3219,
+      "Bot": 1948,
+      "Web Attack - Brute Force": 1470,
+      "Web Attack - XSS": 652,
+      "Infiltration": 36,
+      "Web Attack - Sql Injection": 21,
+      "Heartbleed": 11
+    },
+    "class_percentages": {
+      "BENIGN": 83.1109,
+      "DoS Hulk": 6.8568,
+      "DDoS": 5.0783,
+      "PortScan": 3.5978,
+      "DoS GoldenEye": 0.408,
+      "FTP-Patator": 0.2353,
+      "DoS slowloris": 0.2136,
+      "DoS Slowhttptest": 0.2074,
+      "SSH-Patator": 0.1277,
+      "Bot": 0.0773,
+      "Web Attack - Brute Force": 0.0583,
+      "Web Attack - XSS": 0.0259,
+      "Infiltration": 0.0014,
+      "Web Attack - Sql Injection": 0.0008,
+      "Heartbleed": 0.0004
+    },
+    "attack_family_counts": {
+      "Benign": 2095057,
+      "DoS/DDoS": 321759,
+      "Recon": 90694,
+      "Brute Force": 9150,
+      "Web/Exploit": 2154,
+      "Botnet": 1948,
+      "Infiltration": 36
+    },
+    "unknown_labels": []
+  },
+  "rare_classes": {
+    "floor": 20,
+    "classes_below_floor": {
+      "Heartbleed": 11
+    },
+    "note": "Rare classes are preserved in the dataset and split, never dropped. See split.py for the documented fallback strategy applied to each class listed here."
+  },
+  "split": {
+    "seed": 42,
+    "target_ratios": {
+      "train": 0.7,
+      "val": 0.15,
+      "test": 0.15
+    },
+    "actual_sizes": {
+      "train": 1764559,
+      "val": 378120,
+      "test": 378119
+    },
+    "per_class_allocation": {
+      "BENIGN": {
+        "total": 2095057,
+        "train": 1466540,
+        "val": 314259,
+        "test": 314258
+      },
+      "FTP-Patator": {
+        "total": 5931,
+        "train": 4152,
+        "val": 890,
+        "test": 889
+      },
+      "SSH-Patator": {
+        "total": 3219,
+        "train": 2253,
+        "val": 483,
+        "test": 483
+      },
+      "DoS slowloris": {
+        "total": 5385,
+        "train": 3769,
+        "val": 808,
+        "test": 808
+      },
+      "DoS Slowhttptest": {
+        "total": 5228,
+        "train": 3660,
+        "val": 784,
+        "test": 784
+      },
+      "DoS Hulk": {
+        "total": 172846,
+        "train": 120992,
+        "val": 25927,
+        "test": 25927
+      },
+      "DoS GoldenEye": {
+        "total": 10286,
+        "train": 7200,
+        "val": 1543,
+        "test": 1543
+      },
+      "Heartbleed": {
+        "total": 11,
+        "train": 8,
+        "val": 2,
+        "test": 1
+      },
+      "Web Attack - Brute Force": {
+        "total": 1470,
+        "train": 1029,
+        "val": 220,
+        "test": 221
+      },
+      "Web Attack - XSS": {
+        "total": 652,
+        "train": 456,
+        "val": 98,
+        "test": 98
+      },
+      "Web Attack - Sql Injection": {
+        "total": 21,
+        "train": 15,
+        "val": 3,
+        "test": 3
+      },
+      "Infiltration": {
+        "total": 36,
+        "train": 25,
+        "val": 5,
+        "test": 6
+      },
+      "Bot": {
+        "total": 1948,
+        "train": 1364,
+        "val": 292,
+        "test": 292
+      },
+      "PortScan": {
+        "total": 90694,
+        "train": 63486,
+        "val": 13604,
+        "test": 13604
+      },
+      "DDoS": {
+        "total": 128014,
+        "train": 89610,
+        "val": 19202,
+        "test": 19202
+      }
+    },
+    "fallback_classes": [
+      {
+        "label": "Heartbleed",
+        "n": 11,
+        "reason": "below rare_class_floor (20) but proportional split still yielded >=1 sample in every split"
+      }
+    ]
+  }
+}
