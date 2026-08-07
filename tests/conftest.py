@@ -14,13 +14,19 @@ import pytest
 
 from sentinelxai.config import (
     AppConfig,
+    BaselineModelsConfig,
     CleaningConfig,
     ClipRule,
     DataConfig,
     DuplicateColumnRule,
     FeatureEngineeringConfig,
+    LinearModelPreprocessingConfig,
+    LogisticRegressionConfig,
     PathsConfig,
+    PortBucketRule,
+    RandomForestConfig,
     SplitConfig,
+    XGBoostConfig,
 )
 
 
@@ -57,6 +63,27 @@ def sample_config(tmp_path) -> AppConfig:
         sentinel_preserve_columns=("Init_Win_bytes_forward",),
         correlation_removal_threshold=0.95,
     )
+    baseline_models = BaselineModelsConfig(
+        logistic_regression=LogisticRegressionConfig(
+            max_iter=200, C=1.0, solver="lbfgs", class_weight="balanced"
+        ),
+        random_forest=RandomForestConfig(
+            n_estimators=10, max_depth=5, min_samples_leaf=2, n_jobs=1,
+            class_weight="balanced_subsample",
+        ),
+        xgboost=XGBoostConfig(
+            n_estimators=10, max_depth=3, learning_rate=0.1, tree_method="hist", n_jobs=1
+        ),
+        linear_model_preprocessing=LinearModelPreprocessingConfig(
+            destination_port_buckets=(
+                PortBucketRule(name="port_well_known", min_port=None, max_port=1023),
+                PortBucketRule(name="port_registered", min_port=1024, max_port=49151),
+                PortBucketRule(name="port_dynamic", min_port=49152, max_port=None),
+            ),
+            destination_port_indicator_ports=(21, 22, 80, 443, 3389),
+            log1p_all_features=True,
+        ),
+    )
     return AppConfig(
         project_name="SentinelXAI-test",
         project_version="0.0.0",
@@ -65,6 +92,7 @@ def sample_config(tmp_path) -> AppConfig:
         paths=paths,
         data=data,
         features=features,
+        baseline_models=baseline_models,
     )
 
 

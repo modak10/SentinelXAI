@@ -87,6 +87,54 @@ class FeatureEngineeringConfig:
 
 
 @dataclass(frozen=True)
+class LogisticRegressionConfig:
+    max_iter: int
+    C: float
+    solver: str
+    class_weight: str
+
+
+@dataclass(frozen=True)
+class RandomForestConfig:
+    n_estimators: int
+    max_depth: int
+    min_samples_leaf: int
+    n_jobs: int
+    class_weight: str
+
+
+@dataclass(frozen=True)
+class XGBoostConfig:
+    n_estimators: int
+    max_depth: int
+    learning_rate: float
+    tree_method: str
+    n_jobs: int
+
+
+@dataclass(frozen=True)
+class PortBucketRule:
+    name: str
+    min_port: int | None
+    max_port: int | None
+
+
+@dataclass(frozen=True)
+class LinearModelPreprocessingConfig:
+    destination_port_buckets: tuple[PortBucketRule, ...]
+    destination_port_indicator_ports: tuple[int, ...]
+    log1p_all_features: bool
+
+
+@dataclass(frozen=True)
+class BaselineModelsConfig:
+    logistic_regression: LogisticRegressionConfig
+    random_forest: RandomForestConfig
+    xgboost: XGBoostConfig
+    linear_model_preprocessing: LinearModelPreprocessingConfig
+
+
+@dataclass(frozen=True)
 class AppConfig:
     project_name: str
     project_version: str
@@ -95,6 +143,7 @@ class AppConfig:
     paths: PathsConfig
     data: DataConfig
     features: FeatureEngineeringConfig
+    baseline_models: BaselineModelsConfig
 
 
 def _load_yaml(path: Path) -> dict:
@@ -124,6 +173,7 @@ def get_config() -> AppConfig:
     raw_config = _load_yaml(CONFIGS_DIR / "config.yaml")
     raw_data = _load_yaml(CONFIGS_DIR / "data.yaml")
     raw_features = _load_yaml(CONFIGS_DIR / "features.yaml")
+    raw_baselines = _load_yaml(CONFIGS_DIR / "baseline_models.yaml")
 
     paths_raw = raw_config["paths"]
     paths = PathsConfig(
@@ -193,6 +243,47 @@ def get_config() -> AppConfig:
             f"sentinel-preserved: {sentinel_overlap}"
         )
 
+    lr_raw = raw_baselines["logistic_regression"]
+    rf_raw = raw_baselines["random_forest"]
+    xgb_raw = raw_baselines["xgboost"]
+    lmp_raw = raw_baselines["linear_model_preprocessing"]
+    baseline_models = BaselineModelsConfig(
+        logistic_regression=LogisticRegressionConfig(
+            max_iter=int(lr_raw["max_iter"]),
+            C=float(lr_raw["C"]),
+            solver=lr_raw["solver"],
+            class_weight=lr_raw["class_weight"],
+        ),
+        random_forest=RandomForestConfig(
+            n_estimators=int(rf_raw["n_estimators"]),
+            max_depth=int(rf_raw["max_depth"]),
+            min_samples_leaf=int(rf_raw["min_samples_leaf"]),
+            n_jobs=int(rf_raw["n_jobs"]),
+            class_weight=rf_raw["class_weight"],
+        ),
+        xgboost=XGBoostConfig(
+            n_estimators=int(xgb_raw["n_estimators"]),
+            max_depth=int(xgb_raw["max_depth"]),
+            learning_rate=float(xgb_raw["learning_rate"]),
+            tree_method=xgb_raw["tree_method"],
+            n_jobs=int(xgb_raw["n_jobs"]),
+        ),
+        linear_model_preprocessing=LinearModelPreprocessingConfig(
+            destination_port_buckets=tuple(
+                PortBucketRule(
+                    name=b["name"],
+                    min_port=b.get("min_port"),
+                    max_port=b.get("max_port"),
+                )
+                for b in lmp_raw["destination_port_buckets"]
+            ),
+            destination_port_indicator_ports=tuple(
+                int(p) for p in lmp_raw["destination_port_indicator_ports"]
+            ),
+            log1p_all_features=bool(lmp_raw["log1p_all_features"]),
+        ),
+    )
+
     return AppConfig(
         project_name=raw_config["project"]["name"],
         project_version=raw_config["project"]["version"],
@@ -201,4 +292,5 @@ def get_config() -> AppConfig:
         paths=paths,
         data=data,
         features=features,
+        baseline_models=baseline_models,
     )

@@ -66,3 +66,27 @@ def test_data_config_duplicate_columns_no_longer_required():
     """
     cfg = get_config()
     assert cfg.data.duplicate_columns == ()
+
+
+def test_baseline_models_config_loads():
+    cfg = get_config()
+    assert cfg.baseline_models.logistic_regression.class_weight == "balanced"
+    assert cfg.baseline_models.random_forest.n_estimators > 0
+    assert cfg.baseline_models.xgboost.tree_method == "hist"
+
+
+def test_baseline_models_port_buckets_cover_full_range_with_no_gaps():
+    """well_known (0-1023) + registered (1024-49151) + dynamic (49152+)
+    must partition the full 0-65535 port range with no gap and no overlap.
+    """
+    cfg = get_config()
+    buckets = {b.name: b for b in cfg.baseline_models.linear_model_preprocessing.destination_port_buckets}
+    assert buckets["port_well_known"].max_port + 1 == buckets["port_registered"].min_port
+    assert buckets["port_registered"].max_port + 1 == buckets["port_dynamic"].min_port
+
+
+def test_baseline_models_indicator_ports_are_valid_port_numbers():
+    cfg = get_config()
+    ports = cfg.baseline_models.linear_model_preprocessing.destination_port_indicator_ports
+    assert all(0 <= p <= 65535 for p in ports)
+    assert len(ports) == len(set(ports))  # no duplicates
