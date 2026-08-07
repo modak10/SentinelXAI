@@ -4,14 +4,15 @@
 # Paths below assume Windows (venv/Scripts/...), matching this project's dev
 # environment. On Linux/macOS, replace `venv/Scripts/` with `venv/bin/`.
 
-.PHONY: help setup data eda test lint
+.PHONY: help setup data eda engineer test lint
 
 help:
-	@echo "make setup  - create venv and install dev dependencies"
-	@echo "make data   - run the dataset pipeline (raw -> processed parquet + report)"
-	@echo "make eda    - run exploratory data analysis on the train split"
-	@echo "make test   - run the unit test suite"
-	@echo "make lint   - run ruff over src/, scripts/, tests/"
+	@echo "make setup     - create venv and install dev dependencies"
+	@echo "make data      - run the dataset pipeline (raw -> processed parquet + report)"
+	@echo "make eda       - run exploratory data analysis on the train split"
+	@echo "make engineer  - apply feature engineering (drop/clip) to train/val/test"
+	@echo "make test      - run the unit test suite"
+	@echo "make lint      - run ruff over src/, scripts/, tests/"
 
 setup:
 	python -m venv venv
@@ -23,6 +24,9 @@ data:
 
 eda:
 	venv/Scripts/python scripts/run_eda.py
+
+engineer:
+	venv/Scripts/python scripts/engineer_features.py
 
 test:
 	venv/Scripts/python -m pytest -v

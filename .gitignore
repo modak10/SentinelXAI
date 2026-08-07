@@ -7,10 +7,12 @@ data/external/**
 !data/interim/.gitkeep
 !data/processed/.gitkeep
 !data/external/.gitkeep
-# Exception: the data quality report is small (~8KB) and is itself a
-# reviewable artifact (evidence of the pipeline's actual output), unlike
-# the multi-hundred-MB parquet splits it summarizes.
+# Exception: these reports are small and are themselves reviewable
+# artifacts (evidence of the pipeline's actual output), unlike the
+# multi-hundred-MB parquet splits (including data/processed/engineered/)
+# they summarize.
 !data/processed/data_quality_report.json
+!data/processed/feature_engineering_report.json
 
 # --- Models / artifacts ---
 models/**
@@ -19,7 +21,9 @@ models/**
 *.joblib
 
 # --- Logs ---
-logs/*.log
+# Matches application.log, error.log, AND their rotated backups
+# (application.log.1, .log.2, ...) created by RotatingFileHandler.
+logs/*.log*
 # reports/ (EDA figures, summaries, feature stats) is intentionally NOT
 # ignored — those artifacts are small (<400KB total) and are themselves
 # reviewable evidence of work done, unlike the raw/processed data.

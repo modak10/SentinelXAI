@@ -90,34 +90,80 @@ def normalize_label(raw_label: str) -> str:
     return label
 
 
-def resolve_duplicate_columns(
-    df: pd.DataFrame, rules: tuple[DuplicateColumnRule, ...]
-) -> pd.DataFrame:
-    """Drop duplicate-named columns per config, keeping the configured copy.
+_MANGLE_SUFFIX_RE = re.compile(r"^(?P<base>.+)\.(?P<n>\d+)$")
 
-    ``pandas`` permits non-unique column labels, so a duplicate like
-    ``Fwd Header Length`` (present at two raw positions) survives a plain
-    ``read_csv`` as two columns sharing one name. This resolves that
-    deterministically and explicitly, rather than leaving pandas' default
-    "last one wins on ``df[name]`` access" behavior as an implicit bug
-    magnet.
+
+def _base_name(name: str, known_names: set[str]) -> str:
+    """Return the pre-mangle base name for a pandas-deduped column label.
+
+    ``pandas`` silently renames the 2nd+ occurrence of a duplicate CSV
+    header from ``"X"`` to ``"X.1"``, ``"X.2"``, ... during ``read_csv`` —
+    *before* any of our code ever sees the column names. A later exact
+    string match against the configured name ``"X"`` therefore misses
+    ``"X.1"`` entirely, which is exactly how the ``Fwd Header Length``
+    duplicate silently survived cleaning (see docs/DATASET_GUIDE.md).
+
+    ``"X.N"`` is only treated as a mangled duplicate of ``"X"`` when ``"X"``
+    is *also* present among the columns — that combination is how pandas'
+    mangling always looks, so a genuinely distinct column that happens to
+    be named e.g. ``"Metric.2"`` (with no sibling literally named
+    ``"Metric"``) is never mistaken for a duplicate.
     """
-    if df.columns.is_unique:
+    match = _MANGLE_SUFFIX_RE.match(name)
+    if match and match.group("base") in known_names:
+        return match.group("base")
+    return name
+
+
+def find_duplicate_column_groups(columns: list[str]) -> dict[str, list[int]]:
+    """Group column positions by pre-mangle base name.
+
+    Only groups with more than one column are returned. Works for both
+    pandas-mangled duplicates (``"X"`` / ``"X.1"`` / ``"X.2"``) and literal
+    duplicate labels (two columns both literally named ``"X"``, e.g. in a
+    hand-built DataFrame in a test) uniformly.
+    """
+    known = set(columns)
+    groups: dict[str, list[int]] = {}
+    for i, name in enumerate(columns):
+        base = _base_name(name, known)
+        groups.setdefault(base, []).append(i)
+    return {base: positions for base, positions in groups.items() if len(positions) > 1}
+
+
+def resolve_duplicate_columns(
+    df: pd.DataFrame, rules: tuple[DuplicateColumnRule, ...] = ()
+) -> pd.DataFrame:
+    """Drop duplicate columns, detected generically — no config required.
+
+    Detection (:func:`find_duplicate_column_groups`) is automatic and
+    dataset-agnostic: it catches any number of duplicates of any column,
+    including ones pandas has already mangled with a ``.1``/``.2`` suffix,
+    without needing each one named in config. ``rules`` is only needed to
+    *override* the default "keep the first occurrence" policy for a
+    specific base name (pass ``keep="last"``) — most callers pass none.
+    """
+    duplicate_groups = find_duplicate_column_groups(list(df.columns))
+    if not duplicate_groups:
         return df
 
-    # Drop by integer position, not by label: the label is duplicated by
-    # definition here, so df.drop(columns=[name]) would remove *every*
-    # column sharing that name — including the one we mean to keep.
+    keep_policy = {rule.name: rule.keep for rule in rules}
+
+    # Drop by integer position, not by label: the label may be duplicated,
+    # so df.drop(columns=[name]) would remove *every* column sharing that
+    # name — including the one we mean to keep.
+    new_columns = list(df.columns)
     drop_positions: set[int] = set()
-    for rule in rules:
-        positions = [i for i, c in enumerate(df.columns) if c == rule.name]
-        if len(positions) < 2:
-            continue
-        keep_index = positions[0] if rule.keep == "first" else positions[-1]
+    for base, positions in duplicate_groups.items():
+        policy = keep_policy.get(base, "first")
+        keep_index = positions[0] if policy == "first" else positions[-1]
         drop_positions.update(p for p in positions if p != keep_index)
-
-    if not drop_positions:
-        return df
+        # Normalize away any ".N" mangling on the survivor, so the kept
+        # column's name is always the clean base name regardless of
+        # whether "first" or "last" happened to be the mangled one.
+        new_columns[keep_index] = base
 
     keep_positions = [i for i in range(df.shape[1]) if i not in drop_positions]
-    return df.iloc[:, keep_positions]
+    result = df.iloc[:, keep_positions]
+    result.columns = [new_columns[i] for i in keep_positions]
+    return result

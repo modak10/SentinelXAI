@@ -67,9 +67,14 @@ per-file column-name normalization is needed beyond whitespace stripping.
 # Known Data Quality Issues (found during implementation, not assumed)
 
 1. **Duplicate `Fwd Header Length` column.** The header repeats this column name at
-   positions 35 and 56 with identical values in every row. Resolved by
-   `schema.resolve_duplicate_columns` (keeps the first occurrence, drops the second) —
-   see `configs/data.yaml` -> `duplicate_columns`.
+   positions 35 and 56 with identical values in every row. `schema.resolve_duplicate_columns`
+   handles this **generically** — it detects pandas' own `.1`/`.2` mangled-duplicate
+   suffixes (not a hardcoded name match), so it catches any number of duplicates of any
+   column on any future dataset variant without a config entry per column. (Milestone 2
+   review found the first version of this function only matched exact pre-mangle names
+   and therefore never actually fired — see the "Milestone 2 Corrections" section below.)
+   `configs/data.yaml` -> `duplicate_columns` is now only used to *override* the default
+   keep-first policy for a specific column, and is empty by default.
 2. **Corrupted "Web Attack" labels.** The three Web Attack labels contain the Unicode
    replacement character (U+FFFD) in place of what was originally an en-dash — this is
    baked into the publicly released CSVs (valid UTF-8, not a read/encoding error on our
@@ -99,11 +104,21 @@ per-file column-name normalization is needed beyond whitespace stripping.
 | Rows dropped (exact duplicates) | 307,078 |
 | Label values normalized (encoding artifact cleanup) | 2,143 |
 | **Rows after cleaning** | **2,520,798** |
-| Feature columns | 78 (+ `Label`, + `__source_file` metadata) |
+| Feature columns | 77 (+ `Label`, + `__source_file` metadata) |
 | Classes | 15 (1 benign + 14 attack) |
 
 Full machine-readable detail — including the exact per-class counts — is regenerated
 on every pipeline run at `data/processed/data_quality_report.json`.
+
+## Milestone 2 Corrections
+
+- **Duplicate-column fix applied and the dataset regenerated.** The feature count above
+  changed from the original 78 to 77 as a direct result: `Fwd Header Length.1` (the
+  undetected duplicate, see issue 1 above) is now correctly dropped at the source during
+  `build_dataset.py`, rather than surviving into the processed parquet files and only
+  being caught downstream by EDA's correlation scan. All row/duplicate/cleaning counts
+  in the table above are unchanged (the fix only removes a redundant *column*, not any
+  rows).
 
 ---
 

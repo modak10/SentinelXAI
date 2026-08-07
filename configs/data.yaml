@@ -21,11 +21,13 @@ raw_file_encoding: utf-8
 
 label_column: Label
 
-# CICIDS2017's raw header repeats "Fwd Header Length" at columns 35 and 56
-# with identical values. We keep the first occurrence and drop the second.
-duplicate_columns:
-  - name: "Fwd Header Length"
-    keep: first
+# Duplicate-column detection is now fully automatic (see
+# schema.py::find_duplicate_column_groups) -- it catches pandas-mangled
+# ".1"/".2" duplicates of ANY column without needing each one listed here.
+# This list only OVERRIDES the default "keep first occurrence" policy for
+# a specific column; it is empty because "keep first" is already correct
+# for every duplicate found in this dataset (e.g. "Fwd Header Length").
+duplicate_columns: []
 
 split:
   train: 0.70

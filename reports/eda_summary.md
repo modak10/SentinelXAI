@@ -1,7 +1,7 @@
 # EDA Summary (train split)
 
 - Rows: 1,764,559
-- Numeric feature columns: 78
+- Numeric feature columns: 77
 - Classes: 15
 
 ## Class Distribution
@@ -49,7 +49,6 @@ These features are constant in the train split and carry no signal — candidate
 | Bwd Packet Length Mean | Avg Bwd Segment Size | 1.0 |
 | Fwd PSH Flags | SYN Flag Count | 1.0 |
 | Fwd URG Flags | CWE Flag Count | 1.0 |
-| Fwd Header Length | Fwd Header Length.1 | 1.0 |
 | RST Flag Count | ECE Flag Count | 1.0 |
 | Total Fwd Packets | Total Backward Packets | 0.9992 |
 | Total Fwd Packets | Subflow Bwd Packets | 0.9992 |

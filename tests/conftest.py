@@ -15,8 +15,10 @@ import pytest
 from sentinelxai.config import (
     AppConfig,
     CleaningConfig,
+    ClipRule,
     DataConfig,
     DuplicateColumnRule,
+    FeatureEngineeringConfig,
     PathsConfig,
     SplitConfig,
 )
@@ -48,6 +50,13 @@ def sample_config(tmp_path) -> AppConfig:
         cleaning=cleaning,
         leak_risk_columns=(),
     )
+    features = FeatureEngineeringConfig(
+        exclude_columns=("__source_file",),
+        drop_columns=("Constant Feature",),
+        clip_columns=(ClipRule(name="Flow Duration", min_value=0.0),),
+        sentinel_preserve_columns=("Init_Win_bytes_forward",),
+        correlation_removal_threshold=0.95,
+    )
     return AppConfig(
         project_name="SentinelXAI-test",
         project_version="0.0.0",
@@ -55,6 +64,7 @@ def sample_config(tmp_path) -> AppConfig:
         log_level="DEBUG",
         paths=paths,
         data=data,
+        features=features,
     )
 
 

@@ -1,0 +1,83 @@
+# Feature engineering configuration for CICIDS2017 (Milestone 2).
+# Every decision below is justified in docs/DATASET_GUIDE.md's "Feature
+# Audit" / "Correlation Analysis" sections and was reviewed and approved
+# before implementation (Milestone 2 Feature Engineering & Modeling Plan).
+# Nothing here is applied silently -- see src/sentinelxai/features/engineering.py.
+
+# Structural, non-feature columns. Never valid model inputs. __source_file
+# is Milestone 1 loader provenance metadata that would leak dataset-origin
+# information (some rare labels appear in only one source file).
+exclude_columns:
+  - "__source_file"
+
+# Features removed for redundancy (r=1.0 correlation, verified on train
+# split) or confirmed zero variance. Applied identically to train/val/test
+# -- this is a structural decision, not fit on data.
+drop_columns:
+  # Definitional duplicates (CICFlowMeter computes these identically to
+  # another column for single-subflow flows).
+  - "Subflow Fwd Packets"      # r=1.0 with "Total Fwd Packets"
+  - "Subflow Bwd Packets"      # r=1.0 with "Total Backward Packets"
+  - "Subflow Fwd Bytes"        # r=1.0 with "Total Length of Fwd Packets"
+  - "Subflow Bwd Bytes"        # r=1.0 with "Total Length of Bwd Packets"
+  - "Avg Fwd Segment Size"     # r=1.0 with "Fwd Packet Length Mean"
+  - "Avg Bwd Segment Size"     # r=1.0 with "Bwd Packet Length Mean"
+  # Empirical (dataset-specific, NOT definitional) r=1.0 duplicates -- see
+  # docs/DATASET_GUIDE.md caveat: not guaranteed to hold on live traffic.
+  - "Fwd PSH Flags"            # r=1.0 with "SYN Flag Count" (kept)
+  - "Fwd URG Flags"            # r=1.0 with "CWE Flag Count" (kept)
+  - "ECE Flag Count"           # r=1.0 with "RST Flag Count" (kept)
+  # Confirmed zero variance across all 1,764,559 train rows.
+  - "Bwd PSH Flags"
+  - "Bwd URG Flags"
+  - "Fwd Avg Bytes/Bulk"
+  - "Fwd Avg Packets/Bulk"
+  - "Fwd Avg Bulk Rate"
+  - "Bwd Avg Bytes/Bulk"
+  - "Bwd Avg Packets/Bulk"
+  - "Bwd Avg Bulk Rate"
+
+# Columns clipped to a physically valid floor. These are corruption/overflow
+# artifacts (durations, rates, header lengths cannot be negative), NOT
+# legitimate values -- confirmed to affect only 0.118% of train rows, but
+# disproportionately hits the rarest class (Heartbleed: 4 of 8 train
+# samples). Rows are NEVER dropped for this. Every clip is counted and
+# logged per column at run time -- see engineering.py's ClippingReport.
+clip_columns:
+  - name: "Flow Duration"
+    min_value: 0.0
+  - name: "Flow Bytes/s"
+    min_value: 0.0
+  - name: "Flow Packets/s"
+    min_value: 0.0
+  - name: "Flow IAT Mean"
+    min_value: 0.0
+  - name: "Flow IAT Max"
+    min_value: 0.0
+  - name: "Flow IAT Min"
+    min_value: 0.0
+  - name: "Fwd IAT Min"
+    min_value: 0.0
+  - name: "Fwd Header Length"
+    min_value: 0.0
+  - name: "Bwd Header Length"
+    min_value: 0.0
+  - name: "min_seg_size_forward"
+    min_value: 0.0
+
+# Explicitly NOT clipped: Init_Win_bytes_forward / Init_Win_bytes_backward.
+# Their min value of -1 is a documented CICFlowMeter sentinel meaning "not
+# observed" (e.g. TCP window scaling absent), not corruption -- clipping to
+# 0 would destroy real information. Listed here so the omission reads as a
+# reviewed decision, not an oversight; engineering.py asserts neither
+# column ever appears in clip_columns above.
+sentinel_preserve_columns:
+  - "Init_Win_bytes_forward"
+  - "Init_Win_bytes_backward"
+
+# Correlation threshold used during the Milestone 2 feature audit (see
+# docs/DATASET_GUIDE.md "Correlation Analysis" -- driven by SHAP
+# explainability faithfulness, not just multicollinearity). Recorded here
+# for reproducibility of that analysis; drop_columns above is the
+# reviewed, versioned outcome, not re-derived automatically at run time.
+correlation_removal_threshold: 0.95

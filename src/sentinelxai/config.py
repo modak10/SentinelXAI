@@ -72,6 +72,21 @@ class DataConfig:
 
 
 @dataclass(frozen=True)
+class ClipRule:
+    name: str
+    min_value: float
+
+
+@dataclass(frozen=True)
+class FeatureEngineeringConfig:
+    exclude_columns: tuple[str, ...]
+    drop_columns: tuple[str, ...]
+    clip_columns: tuple[ClipRule, ...]
+    sentinel_preserve_columns: tuple[str, ...]
+    correlation_removal_threshold: float
+
+
+@dataclass(frozen=True)
 class AppConfig:
     project_name: str
     project_version: str
@@ -79,6 +94,7 @@ class AppConfig:
     log_level: str
     paths: PathsConfig
     data: DataConfig
+    features: FeatureEngineeringConfig
 
 
 def _load_yaml(path: Path) -> dict:
@@ -107,6 +123,7 @@ def get_config() -> AppConfig:
 
     raw_config = _load_yaml(CONFIGS_DIR / "config.yaml")
     raw_data = _load_yaml(CONFIGS_DIR / "data.yaml")
+    raw_features = _load_yaml(CONFIGS_DIR / "features.yaml")
 
     paths_raw = raw_config["paths"]
     paths = PathsConfig(
@@ -155,6 +172,27 @@ def get_config() -> AppConfig:
         leak_risk_columns=tuple(raw_data.get("leak_risk_columns", [])),
     )
 
+    features = FeatureEngineeringConfig(
+        exclude_columns=tuple(raw_features.get("exclude_columns", [])),
+        drop_columns=tuple(raw_features.get("drop_columns", [])),
+        clip_columns=tuple(
+            ClipRule(name=c["name"], min_value=float(c["min_value"]))
+            for c in raw_features.get("clip_columns", [])
+        ),
+        sentinel_preserve_columns=tuple(raw_features.get("sentinel_preserve_columns", [])),
+        correlation_removal_threshold=float(
+            raw_features.get("correlation_removal_threshold", 0.95)
+        ),
+    )
+    clip_names = {c.name for c in features.clip_columns}
+    sentinel_overlap = clip_names & set(features.sentinel_preserve_columns)
+    if sentinel_overlap:
+        raise ValueError(
+            f"Columns listed in both clip_columns and sentinel_preserve_columns "
+            f"(configs/features.yaml) — a column cannot be both clipped and "
+            f"sentinel-preserved: {sentinel_overlap}"
+        )
+
     return AppConfig(
         project_name=raw_config["project"]["name"],
         project_version=raw_config["project"]["version"],
@@ -162,4 +200,5 @@ def get_config() -> AppConfig:
         log_level=os.getenv("LOG_LEVEL", "INFO"),
         paths=paths,
         data=data,
+        features=features,
     )
