@@ -1,0 +1,120 @@
+# Decision Intelligence policy layer (Phase 5).
+#
+# This file is the SINGLE SOURCE OF TRUTH for the domain policy that turns a
+# model prediction + confidence into an operational risk level and a set of
+# investigation recommendations.
+#
+# CRITICAL: these mappings are a documented security-policy decision, NOT the
+# model's output. The ML model predicts an attack *class*; it does not know
+# business risk. Keeping this in config (per CLAUDE.md "Never hardcode
+# values") means the policy can be reviewed and changed by a human without
+# touching code.
+
+# Ordered, ranked risk vocabulary. `rank` defines escalation order.
+risk_levels:
+  - name: LOW
+    rank: 1
+  - name: MEDIUM
+    rank: 2
+  - name: HIGH
+    rank: 3
+  - name: CRITICAL
+    rank: 4
+
+# Base severity per predicted attack class (the starting risk before
+# confidence modulation). Aligned with the 15-class CICIDS2017 taxonomy in
+# src/sentinelxai/data/schema.py KNOWN_LABELS.
+attack_severity:
+  BENIGN: LOW
+  PortScan: MEDIUM
+  DDoS: HIGH
+  "DoS Hulk": HIGH
+  "DoS GoldenEye": HIGH
+  "DoS Slowhttptest": MEDIUM
+  "DoS slowloris": MEDIUM
+  Bot: CRITICAL
+  Infiltration: HIGH
+  "FTP-Patator": MEDIUM
+  "SSH-Patator": MEDIUM
+  Heartbleed: HIGH
+  "Web Attack - Brute Force": HIGH
+  "Web Attack - Sql Injection": HIGH
+  "Web Attack - XSS": MEDIUM
+
+# Confidence thresholds used to band the model's max-class probability.
+confidence:
+  high: 0.90
+  medium: 0.70
+  low: 0.50
+
+# How confidence modulates the base severity into operational risk.
+risk_modulation:
+  # If confidence is below this AND the class is not BENIGN, escalate one
+  # risk level — a low-certainty attack alert is treated more cautiously.
+  escalate_below_confidence: 0.70
+  benign_never_escalate: true
+  # Confidence band below which a prediction is flagged as a "failure
+  # candidate" for the Failure Explorer (low confidence => analyst caution).
+  failure_confidence_threshold: 0.55
+
+# Deterministic, rule-based investigation guidance per attack class.
+# These are NOT automated remediation — they are analyst-facing suggestions.
+recommendations:
+  BENIGN:
+    - "No action required; monitor as part of routine traffic baseline."
+  PortScan:
+    - "Review source host activity for horizontal/vertical scanning behavior."
+    - "Check for repeated connection attempts across many destination ports."
+    - "Correlate with firewall and IDS logs for sweep patterns."
+  DDoS:
+    - "Validate traffic volume against baseline; confirm volumetric anomaly."
+    - "Engage network team to verify upstream throttling / scrubbing options."
+    - "Identify top source ASNs and consider rate-limiting at the edge."
+  "DoS Hulk":
+    - "Inspect target service for resource exhaustion (CPU/mem/connections)."
+    - "Confirm whether the endpoint can shed load or needs scaling."
+    - "Review rate-limiting and connection caps on the affected service."
+  "DoS GoldenEye":
+    - "Check application-layer (HTTP) worker pool exhaustion."
+    - "Review keep-alive and request queue limits on the web server."
+    - "Consider temporary request throttling for the affected route."
+  "DoS Slowhttptest":
+    - "Inspect for slow-read/slow-body connection patterns (half-open sockets)."
+    - "Tighten server timeouts for header and body reads."
+    - "Verify connection limits and consider aggressive idle cleanup."
+  "DoS slowloris":
+    - "Inspect for partial-request (slow-header) starvation attacks."
+    - "Reduce client header timeout and maximum simultaneous connections."
+    - "Validate WAF rules blocking incomplete HTTP handshakes."
+  Bot:
+    - "Review DNS behavior of the source host for C2 beaconing patterns."
+    - "Investigate endpoint process activity for persistence/implant signs."
+    - "Consider host isolation per organizational policy and contain the host."
+  Infiltration:
+    - "Review lateral-movement indicators across internal hosts."
+    - "Inspect authentication and SMB/RDP activity for anomalous access."
+    - "Validate segmentation controls between the affected zones."
+  "FTP-Patator":
+    - "Review authentication attempt volume on the FTP service."
+    - "Check source IP history for credential-stuffing patterns."
+    - "Enforce account lockout and strong credentials on the service."
+  "SSH-Patator":
+    - "Review SSH authentication attempts for brute-force patterns."
+    - "Restrict SSH exposure; prefer key-based auth and bastion access."
+    - "Enable fail2ban / rate-limiting on the SSH listener."
+  Heartbleed:
+    - "Identify services running vulnerable OpenSSL versions (TLS heartbeat)."
+    - "Patch and rotate any credentials/tokens exposed on affected hosts."
+    - "Audit for anomalous memory reads or session theft on the endpoint."
+  "Web Attack - Brute Force":
+    - "Review login endpoint authentication attempts for credential attacks."
+    - "Check source IP history and enforce lockout / MFA on the account."
+    - "Inspect affected accounts for successful unauthorized access."
+  "Web Attack - Sql Injection":
+    - "Review application input handling for unsanitized query parameters."
+    - "Patch the vulnerable endpoint and rotate any exposed DB credentials."
+    - "Audit database audit logs for unauthorized reads or exfiltration."
+  "Web Attack - XSS":
+    - "Review the affected endpoint's output-encoding / CSP configuration."
+    - "Sanitize and validate reflected/stored user input."
+    - "Check for session token theft or defacement indicators."

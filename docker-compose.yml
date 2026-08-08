@@ -1,0 +1,44 @@
+# SentinelXAI — one-command deployment (Phase 7).
+# Builds a single image and runs the FastAPI backend and the Streamlit
+# dashboard as two services. Model/data/report artifacts are mounted from the
+# host so the container stays free of large datasets.
+#
+#   docker compose up --build
+#
+# Then open:
+#   - API + docs:  http://localhost:8000/docs
+#   - Dashboard:    http://localhost:8501
+
+services:
+  api:
+    build: .
+    command: >
+      python -m uvicorn sentinelxai.api.main:app
+      --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=production
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./reports:/app/reports
+    restart: unless-stopped
+
+  dashboard:
+    build: .
+    command: >
+      streamlit run src/sentinelxai/dashboard/app.py
+      --server.port 8501 --server.address 0.0.0.0
+      --browser.gatherUsageStats false
+    ports:
+      - "8501:8501"
+    environment:
+      - ENV=production
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./reports:/app/reports
+    restart: unless-stopped

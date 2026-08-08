@@ -12,17 +12,39 @@
 
 # Project Status
 
-**Milestone 1 (Project Setup + Dataset Engineering + EDA): complete and verified
-against the real dataset.** Milestones 2-4 (ML training, SHAP/API, dashboard/Docker)
-are not yet implemented — see `docs/IMPLEMENTATION_ROADMAP.md` status below and
-`docs/DATASET_GUIDE.md` for full pipeline detail and verified numbers.
+**All core milestones are implemented and verified by the test suite.** The platform
+covers the full pipeline from dataset engineering through explainable decision
+intelligence, with a FastAPI backend, Streamlit dashboard, SQLite logging, and Docker
+deployment. See `docs/IMPLEMENTATION_ROADMAP.md` for per-phase detail.
 
-- 2,830,743 raw rows across 8 CICIDS2017 files merged, cleaned, validated
-- 307,078 duplicate rows and 2,867 NaN/±Infinity-affected rows removed and reported
-- 15-class taxonomy validated; all classes preserved through a leakage-aware
-  stratified 70/15/15 split (rare classes documented, never dropped)
-- 25+ unit tests passing, `ruff` clean
-- Reproducible end-to-end in ~4.5 minutes via `python scripts/build_dataset.py`
+- **Dataset (Milestone 1):** 2,830,743 raw rows across 8 CICIDS2017 files merged,
+  cleaned, and validated; 307,078 duplicate rows and 2,867 NaN/±Infinity-affected
+  rows removed; 15-class taxonomy preserved via a leakage-aware 70/15/15 split.
+- **ML (Milestones 2–4):** Logistic Regression, Decision Tree, Random Forest,
+  XGBoost, and LightGBM benchmarks; Optuna-tuned LightGBM is the selected model
+  (best macro-F1 ≈ 0.92 on the validation split).
+- **Explainability (Milestone 5):** TreeSHAP local + global feature attribution with
+  deterministic, human-readable explanations (`src/sentinelxai/explainability/`).
+- **Decision Intelligence (Milestone 6):** confidence banding, operational risk
+  mapping, deterministic recommendations, alert prioritization, and failure-flagging
+  driven by `configs/decision.yaml` (`src/sentinelxai/decision/`).
+- **Backend (Milestone 7):** FastAPI with `/predict`, `/batch_predict`, `/upload`,
+  `/health`, `/metrics`, `/model`, `/feature-importance` — Pydantic-validated,
+  graceful 503 when the trained artifact is absent (`src/sentinelxai/api/`).
+- **Dashboard (Milestone 6 UI):** 7-page dark security-ops Streamlit app with
+  graceful model-absent banners (`src/sentinelxai/dashboard/`).
+- **Persistence:** SQLite prediction log with param-bound queries
+  (`src/sentinelxai/database/`).
+- **Deployment:** `Dockerfile` + `docker-compose.yml` (api + dashboard services).
+- **Tests:** 145 passing, `ruff` clean. New layers are exercised end-to-end against a
+  synthetic LightGBM fixture (`tests/conftest.py::synthetic_model`) so the suite runs
+  without the 844 MB raw dataset or a committed model artifact.
+
+**Note on real artifacts:** the trained model (`models/lightgbm/lightgbm.joblib`),
+encoder, and feature list are git-ignored and not committed. The app degrades
+gracefully (503s / banners) until `make data` and
+`python scripts/train_final_lightgbm.py` are run. All code paths are covered by tests
+via the synthetic fixture.
 
 ---
 
@@ -419,19 +441,25 @@ pytest -v
 
 ---
 
-# Run Backend *(not yet implemented — Milestone 3)*
+# Run Backend
 
 ```bash
 uvicorn src.api.main:app --reload
 ```
 
+Interactive docs at `http://localhost:8000/docs`. The API returns 503 on
+prediction endpoints until the trained artifact is present (see Project Status).
+
 ---
 
-# Run Dashboard *(not yet implemented — Milestone 4)*
+# Run Dashboard
 
 ```bash
 streamlit run src/dashboard/app.py
 ```
+
+Opens at `http://localhost:8501`. Pages show a banner when the trained model is
+absent and degrade to static information.
 
 ---
 

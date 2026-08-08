@@ -154,3 +154,74 @@ def raw_like_df() -> pd.DataFrame:
     # Exact duplicate of the first BENIGN row
     df = pd.concat([df, df.iloc[[0]]], ignore_index=True)
     return df
+
+
+@pytest.fixture
+def synthetic_model(tmp_path):
+    """Build, persist, and load a tiny but real LightGBM pipeline.
+
+    Returns a dict with an :class:`InferenceService`, its SHAP explainer, the
+    feature names, and the label order. Exercises the real load path
+    (joblib model + encoder + feature-list JSON) without needing the 2.8M-row
+    CICIDS2017 dataset or a committed artifact.
+    """
+    import json
+
+    import joblib
+    import lightgbm as lgb
+    import numpy as np
+    from sklearn.preprocessing import LabelEncoder
+
+    from sentinelxai.explainability import SHAPExplainer
+    from sentinelxai.models.inference import InferenceService
+
+    rng = np.random.default_rng(42)
+    feature_names = [
+        "Flow Duration",
+        "SYN Flag Count",
+        "Destination Port",
+        "Packet Length Mean",
+        "Bwd Packet Length Mean",
+    ]
+    label_names = ["BENIGN", "PortScan", "Bot"]
+    n_samples = 300
+    X = rng.random((n_samples, len(feature_names))).astype("float32")
+    # Make labels somewhat separable so SHAP contributions are meaningful.
+    y_idx = (X[:, 1] > 0.6).astype(int) + (X[:, 2] > 0.7).astype(int)
+    y_idx = np.clip(y_idx, 0, len(label_names) - 1)
+    y = np.array(label_names)[y_idx]
+
+    model = lgb.LGBMClassifier(
+        objective="multiclass",
+        num_class=len(label_names),
+        n_estimators=30,
+        random_state=42,
+        n_jobs=1,
+        verbosity=-1,
+    )
+    model.fit(X, y)
+
+    model_dir = tmp_path / "lightgbm"
+    model_dir.mkdir(parents=True, exist_ok=True)
+    joblib.dump(model, model_dir / "lightgbm.joblib")
+
+    encoder = LabelEncoder()
+    encoder.fit(label_names)
+    joblib.dump(encoder, model_dir / "label_encoder.joblib")
+
+    feature_list_path = tmp_path / "lightgbm_feature_list.json"
+    feature_list_path.write_text(json.dumps({"feature_columns": feature_names}))
+
+    service = InferenceService.from_paths(
+        model_path=model_dir / "lightgbm.joblib",
+        encoder_path=model_dir / "label_encoder.joblib",
+        feature_list_path=feature_list_path,
+    )
+    explainer = SHAPExplainer.from_model(service._model, feature_names)
+    return {
+        "service": service,
+        "explainer": explainer,
+        "feature_names": feature_names,
+        "label_names": label_names,
+        "tmp_path": tmp_path,
+    }

@@ -18,3 +18,14 @@ joblib==1.4.2
 lightgbm==4.5.0
 optuna==4.1.0
 optuna-integration[lightgbm]==4.9.0
+
+# --- Phase 4: Explainability (SHAP / TreeSHAP) ---
+shap==0.47.1
+
+# --- Phase 5-7: Decision Intelligence backend + API + Dashboard + DB ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+python-multipart==0.0.20
+streamlit==1.41.1
+plotly==5.24.1

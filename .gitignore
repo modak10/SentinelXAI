@@ -57,3 +57,6 @@ Thumbs.db
 
 # --- Claude Code local tooling state (machine-specific, not project source) ---
 .claude/settings.local.json
+
+# --- Agent memory/tooling state (machine-specific, not project source) ---
+.workbuddy-ai/
