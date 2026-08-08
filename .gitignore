@@ -60,3 +60,4 @@ Thumbs.db
 
 # --- Agent memory/tooling state (machine-specific, not project source) ---
 .workbuddy-ai/
+.kilo/
