@@ -159,7 +159,9 @@ def save_classification_report_txt(y_true: np.ndarray, y_pred: np.ndarray, label
     path.write_text(report_str, encoding="utf-8")
 
 
-def build_comparison_table(results: dict[str, dict]) -> str:
+def build_comparison_table(
+    results: dict[str, dict], *, title: str = "# Baseline Model Comparison (Milestone 3)"
+) -> str:
     """Build the model-comparison markdown from a {model_name: metrics_dict} map.
 
     `metrics_dict` is whatever :meth:`EvaluationReport.to_dict` produces —
@@ -167,11 +169,13 @@ def build_comparison_table(results: dict[str, dict]) -> str:
     or loaded the JSON files back off disk (e.g. because each model was
     trained in its own separate script invocation, as Milestone 3's
     incremental validation required). One table-building implementation,
-    two call sites, matching the "reusable pipeline" requirement.
+    reused across milestones (Milestone 3's baseline-only comparison and
+    Milestone 4's 4-way baselines-vs-LightGBM comparison), matching the
+    "reusable pipeline" requirement — `title` is the only thing that varies.
     """
     ranked = sorted(results.items(), key=lambda kv: -kv[1]["f1_macro"])
     lines = [
-        "# Baseline Model Comparison (Milestone 3)",
+        title,
         "",
         "Evaluated on the VAL split (never test — see docs/JUDGE_QNA.md Q8).",
         "",
@@ -191,4 +195,52 @@ def build_comparison_table(results: dict[str, dict]) -> str:
         f"macro treats every class equally regardless of size, which matters given BENIGN is "
         f"~83% of the data): **{ranked[0][0]}** leads at {ranked[0][1]['f1_macro']:.4f}.",
     ]
+    return "\n".join(lines)
+
+
+def build_pairwise_verdict(
+    results: dict[str, dict], *, challenger: str, baseline: str, metric: str = "f1_macro"
+) -> str:
+    """Explicit "does X surpass Y" verdict markdown for two models in a results map.
+
+    Used by Milestone 4 to state clearly whether LightGBM surpasses the
+    XGBoost baseline (rather than leaving the reader to infer it from a
+    ranked table) — generic over which two models and which metric decide
+    the verdict, so it is not tied to this one comparison.
+    """
+    if challenger not in results or baseline not in results:
+        missing = {challenger, baseline} - set(results)
+        return (
+            f"**Verdict unavailable**: metrics for {sorted(missing)} are required "
+            "to compare them, and at least one is missing."
+        )
+
+    challenger_metrics, baseline_metrics = results[challenger], results[baseline]
+    delta = challenger_metrics[metric] - baseline_metrics[metric]
+    verb = "surpasses" if delta > 0 else ("matches" if delta == 0 else "falls short of")
+
+    lines = [
+        f"**{challenger} {verb} {baseline} on {metric}** "
+        f"({challenger_metrics[metric]:.4f} vs {baseline_metrics[metric]:.4f}, "
+        f"{'+' if delta >= 0 else ''}{delta:.4f}).",
+        "",
+        f"| Metric | {baseline} | {challenger} | Delta |",
+        "|---|---|---|---|",
+    ]
+    for label, key in [
+        ("Accuracy", "accuracy"),
+        ("Macro Precision", "precision_macro"),
+        ("Macro Recall", "recall_macro"),
+        ("Macro F1", "f1_macro"),
+        ("Weighted F1", "f1_weighted"),
+        ("Training Time (s)", "training_time_seconds"),
+        ("Inference (ms/sample)", "inference_time_per_sample_ms"),
+    ]:
+        baseline_v, challenger_v = baseline_metrics[key], challenger_metrics[key]
+        row_delta = challenger_v - baseline_v
+        lines.append(
+            f"| {label} | {baseline_v:.4f} | {challenger_v:.4f} "
+            f"| {'+' if row_delta >= 0 else ''}{row_delta:.4f} |"
+        )
+
     return "\n".join(lines)

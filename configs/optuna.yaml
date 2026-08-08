@@ -1,0 +1,93 @@
+# Optuna hyperparameter search configuration for LightGBM (Milestone 4).
+#
+# Metric design (deliberate, documented rather than assumed):
+#   - Early stopping DURING each trial's fit monitors `early_stopping_metric`
+#     (multi_logloss) -- a robust, well-tested per-round signal. LightGBM's
+#     sklearn API custom-eval_metric path for multiclass is fiddly enough
+#     to add real bug risk for marginal benefit here.
+#   - The metric that actually decides which trial WINS is macro F1
+#     (`objective.primary_metric`), computed once after each trial's fit
+#     completes -- this is what "optimize primarily for Macro F1" means in
+#     practice, and it does not depend on what early stopping watched
+#     internally.
+#   - Pruning (mid-trial abandonment of clearly-losing trials) uses the
+#     same multi_logloss signal via optuna_integration's
+#     LightGBMPruningCallback, since Optuna's pruners need a per-step
+#     signal, not a once-at-the-end one.
+
+study:
+  n_trials: 25
+  direction: maximize
+  sampler: TPE
+  pruner: median
+  seed: 42
+  pruning_enabled: true
+
+training:
+  # Capped at 200 (was 500): a real run showed a low-learning_rate trial
+  # running the full 500 rounds without ever early-stopping (~23 minutes for
+  # that single trial), which made the 25-trial budget balloon to an
+  # estimated ~7 hours. 200 bounds worst-case per-trial cost while
+  # early_stopping_rounds=30 still lets well-converged trials stop sooner.
+  max_boost_round: 200
+  early_stopping_rounds: 30
+  early_stopping_metric: multi_logloss
+
+objective:
+  primary_metric: f1_macro
+  secondary_metric: f1_weighted
+
+# Every entry becomes an Optuna trial.suggest_{float,int} call --
+# see tuning.py::suggest_from_search_space. Matches the Milestone 2
+# Feature Engineering & Modeling Plan's approved search space.
+search_space:
+  learning_rate:
+    type: float
+    low: 0.01
+    high: 0.3
+    log: true
+  num_leaves:
+    type: int
+    low: 15
+    high: 255
+    log: true
+  max_depth:
+    type: int
+    low: 4
+    high: 16
+    log: false
+  min_child_samples:
+    type: int
+    low: 5
+    high: 100
+    log: false
+  feature_fraction:
+    type: float
+    low: 0.5
+    high: 1.0
+    log: false
+  bagging_fraction:
+    type: float
+    low: 0.6
+    high: 1.0
+    log: false
+  bagging_freq:
+    type: int
+    low: 0
+    high: 10
+    log: false
+  lambda_l1:
+    type: float
+    low: 1.0e-8
+    high: 10.0
+    log: true
+  lambda_l2:
+    type: float
+    low: 1.0e-8
+    high: 10.0
+    log: true
+  min_split_gain:
+    type: float
+    low: 0.0
+    high: 1.0
+    log: false

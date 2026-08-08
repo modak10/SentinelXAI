@@ -20,11 +20,14 @@ from sentinelxai.config import (
     DataConfig,
     DuplicateColumnRule,
     FeatureEngineeringConfig,
+    LightGBMConfig,
     LinearModelPreprocessingConfig,
     LogisticRegressionConfig,
+    OptunaConfig,
     PathsConfig,
     PortBucketRule,
     RandomForestConfig,
+    SearchSpaceParam,
     SplitConfig,
     XGBoostConfig,
 )
@@ -84,6 +87,24 @@ def sample_config(tmp_path) -> AppConfig:
             log1p_all_features=True,
         ),
     )
+    lightgbm = LightGBMConfig(objective="multiclass", n_jobs=1, verbosity=-1)
+    optuna_cfg = OptunaConfig(
+        n_trials=2,
+        direction="maximize",
+        sampler="TPE",
+        pruner="median",
+        seed=42,
+        pruning_enabled=True,
+        max_boost_round=20,
+        early_stopping_rounds=5,
+        early_stopping_metric="multi_logloss",
+        primary_metric="f1_macro",
+        secondary_metric="f1_weighted",
+        search_space={
+            "learning_rate": SearchSpaceParam(type="float", low=0.05, high=0.3, log=True),
+            "num_leaves": SearchSpaceParam(type="int", low=8, high=32, log=False),
+        },
+    )
     return AppConfig(
         project_name="SentinelXAI-test",
         project_version="0.0.0",
@@ -93,6 +114,8 @@ def sample_config(tmp_path) -> AppConfig:
         data=data,
         features=features,
         baseline_models=baseline_models,
+        lightgbm=lightgbm,
+        optuna=optuna_cfg,
     )
 
 

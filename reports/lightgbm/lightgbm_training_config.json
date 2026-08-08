@@ -1,0 +1,26 @@
+{
+  "fixed_settings": {
+    "objective": "multiclass",
+    "n_jobs": -1,
+    "verbosity": -1,
+    "random_state": 42
+  },
+  "tuned_hyperparameters": {
+    "learning_rate": 0.08012737503998542,
+    "num_leaves": 22,
+    "max_depth": 7,
+    "min_child_samples": 40,
+    "feature_fraction": 0.728034992108518,
+    "bagging_fraction": 0.9140703845572055,
+    "bagging_freq": 2,
+    "lambda_l1": 0.00042472707398058225,
+    "lambda_l2": 0.0021465011216654484,
+    "min_split_gain": 0.046450412719997725
+  },
+  "n_estimators": 175,
+  "optuna_provenance": {
+    "best_trial_number": 2,
+    "best_f1_macro": 0.9201450217259903,
+    "best_f1_weighted": 0.9987656788596088
+  }
+}

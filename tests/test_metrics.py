@@ -5,6 +5,7 @@ import numpy as np
 from sentinelxai.models.metrics import (
     build_comparison_table,
     build_evaluation_report,
+    build_pairwise_verdict,
     save_confusion_matrix_plot,
 )
 
@@ -154,3 +155,56 @@ def test_build_comparison_table_includes_every_model():
     assert "| a |" in table
     assert "| b |" in table
     assert "| c |" in table
+
+
+def test_build_comparison_table_accepts_custom_title():
+    results = {"a": _fake_metrics(0.5)}
+    table = build_comparison_table(results, title="# Custom Title")
+    assert table.startswith("# Custom Title")
+
+
+# --- build_pairwise_verdict ---
+
+
+def test_build_pairwise_verdict_reports_surpasses_when_challenger_higher():
+    results = {
+        "lightgbm": _fake_metrics(f1_macro=0.90),
+        "xgboost": _fake_metrics(f1_macro=0.85),
+    }
+    verdict = build_pairwise_verdict(results, challenger="lightgbm", baseline="xgboost")
+    assert "lightgbm surpasses xgboost" in verdict
+    assert "0.9000 vs 0.8500" in verdict
+
+
+def test_build_pairwise_verdict_reports_falls_short_when_challenger_lower():
+    results = {
+        "lightgbm": _fake_metrics(f1_macro=0.80),
+        "xgboost": _fake_metrics(f1_macro=0.85),
+    }
+    verdict = build_pairwise_verdict(results, challenger="lightgbm", baseline="xgboost")
+    assert "lightgbm falls short of xgboost" in verdict
+
+
+def test_build_pairwise_verdict_reports_matches_when_equal():
+    results = {
+        "lightgbm": _fake_metrics(f1_macro=0.85),
+        "xgboost": _fake_metrics(f1_macro=0.85),
+    }
+    verdict = build_pairwise_verdict(results, challenger="lightgbm", baseline="xgboost")
+    assert "lightgbm matches xgboost" in verdict
+
+
+def test_build_pairwise_verdict_handles_missing_model():
+    results = {"lightgbm": _fake_metrics(f1_macro=0.90)}
+    verdict = build_pairwise_verdict(results, challenger="lightgbm", baseline="xgboost")
+    assert "Verdict unavailable" in verdict
+    assert "xgboost" in verdict
+
+
+def test_build_pairwise_verdict_includes_full_metric_table():
+    results = {
+        "lightgbm": _fake_metrics(f1_macro=0.90, training_time=50.0),
+        "xgboost": _fake_metrics(f1_macro=0.85, training_time=120.0),
+    }
+    verdict = build_pairwise_verdict(results, challenger="lightgbm", baseline="xgboost")
+    assert "| Training Time (s) | 120.0000 | 50.0000 | -70.0000 |" in verdict

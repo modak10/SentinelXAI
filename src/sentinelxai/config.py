@@ -135,6 +135,37 @@ class BaselineModelsConfig:
 
 
 @dataclass(frozen=True)
+class LightGBMConfig:
+    objective: str
+    n_jobs: int
+    verbosity: int
+
+
+@dataclass(frozen=True)
+class SearchSpaceParam:
+    type: str  # "float" or "int"
+    low: float
+    high: float
+    log: bool
+
+
+@dataclass(frozen=True)
+class OptunaConfig:
+    n_trials: int
+    direction: str
+    sampler: str
+    pruner: str
+    seed: int
+    pruning_enabled: bool
+    max_boost_round: int
+    early_stopping_rounds: int
+    early_stopping_metric: str
+    primary_metric: str
+    secondary_metric: str
+    search_space: dict[str, SearchSpaceParam]
+
+
+@dataclass(frozen=True)
 class AppConfig:
     project_name: str
     project_version: str
@@ -144,6 +175,8 @@ class AppConfig:
     data: DataConfig
     features: FeatureEngineeringConfig
     baseline_models: BaselineModelsConfig
+    lightgbm: LightGBMConfig
+    optuna: OptunaConfig
 
 
 def _load_yaml(path: Path) -> dict:
@@ -174,6 +207,8 @@ def get_config() -> AppConfig:
     raw_data = _load_yaml(CONFIGS_DIR / "data.yaml")
     raw_features = _load_yaml(CONFIGS_DIR / "features.yaml")
     raw_baselines = _load_yaml(CONFIGS_DIR / "baseline_models.yaml")
+    raw_lightgbm = _load_yaml(CONFIGS_DIR / "lightgbm.yaml")
+    raw_optuna = _load_yaml(CONFIGS_DIR / "optuna.yaml")
 
     paths_raw = raw_config["paths"]
     paths = PathsConfig(
@@ -284,6 +319,39 @@ def get_config() -> AppConfig:
         ),
     )
 
+    lightgbm = LightGBMConfig(
+        objective=raw_lightgbm["objective"],
+        n_jobs=int(raw_lightgbm["n_jobs"]),
+        verbosity=int(raw_lightgbm["verbosity"]),
+    )
+
+    study_raw = raw_optuna["study"]
+    training_raw = raw_optuna["training"]
+    objective_raw = raw_optuna["objective"]
+    search_space = {
+        name: SearchSpaceParam(
+            type=spec["type"],
+            low=float(spec["low"]),
+            high=float(spec["high"]),
+            log=bool(spec.get("log", False)),
+        )
+        for name, spec in raw_optuna["search_space"].items()
+    }
+    optuna_cfg = OptunaConfig(
+        n_trials=int(study_raw["n_trials"]),
+        direction=study_raw["direction"],
+        sampler=study_raw["sampler"],
+        pruner=study_raw["pruner"],
+        seed=int(study_raw["seed"]),
+        pruning_enabled=bool(study_raw["pruning_enabled"]),
+        max_boost_round=int(training_raw["max_boost_round"]),
+        early_stopping_rounds=int(training_raw["early_stopping_rounds"]),
+        early_stopping_metric=training_raw["early_stopping_metric"],
+        primary_metric=objective_raw["primary_metric"],
+        secondary_metric=objective_raw["secondary_metric"],
+        search_space=search_space,
+    )
+
     return AppConfig(
         project_name=raw_config["project"]["name"],
         project_version=raw_config["project"]["version"],
@@ -293,4 +361,6 @@ def get_config() -> AppConfig:
         data=data,
         features=features,
         baseline_models=baseline_models,
+        lightgbm=lightgbm,
+        optuna=optuna_cfg,
     )

@@ -90,3 +90,41 @@ def test_baseline_models_indicator_ports_are_valid_port_numbers():
     ports = cfg.baseline_models.linear_model_preprocessing.destination_port_indicator_ports
     assert all(0 <= p <= 65535 for p in ports)
     assert len(ports) == len(set(ports))  # no duplicates
+
+
+def test_lightgbm_config_loads():
+    cfg = get_config()
+    assert cfg.lightgbm.objective == "multiclass"
+
+
+def test_optuna_config_loads_and_recommended_trial_count():
+    cfg = get_config()
+    assert cfg.optuna.direction == "maximize"
+    assert cfg.optuna.primary_metric == "f1_macro"
+    # Project Lead's approved plan: "Recommended search: 20-30 trials"
+    assert 20 <= cfg.optuna.n_trials <= 30
+
+
+def test_optuna_search_space_covers_all_approved_parameters():
+    """The Milestone 2 plan's approved LightGBM search space, verbatim."""
+    cfg = get_config()
+    expected = {
+        "learning_rate",
+        "num_leaves",
+        "max_depth",
+        "min_child_samples",
+        "feature_fraction",
+        "bagging_fraction",
+        "bagging_freq",
+        "lambda_l1",
+        "lambda_l2",
+        "min_split_gain",
+    }
+    assert set(cfg.optuna.search_space.keys()) == expected
+
+
+def test_optuna_search_space_bounds_are_well_formed():
+    cfg = get_config()
+    for name, spec in cfg.optuna.search_space.items():
+        assert spec.low < spec.high, f"{name}: low must be < high"
+        assert spec.type in ("float", "int")
