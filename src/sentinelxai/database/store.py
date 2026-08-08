@@ -26,6 +26,7 @@ class PredictionRecord:
     confidence: float
     risk: str
     probabilities: dict[str, float]
+    input_features: dict | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -125,7 +126,8 @@ class SQLiteStore:
     def get_history(self, limit: int = 100) -> list[PredictionRecord]:
         cur = self._conn.cursor()
         cur.execute(
-            "SELECT id, timestamp, predicted_class, confidence, risk, probabilities_json "
+            "SELECT id, timestamp, predicted_class, confidence, risk, "
+            "probabilities_json, input_features_json "
             "FROM predictions ORDER BY id DESC LIMIT ?",
             (int(limit),),
         )
@@ -138,6 +140,7 @@ class SQLiteStore:
                 confidence=row["confidence"],
                 risk=row["risk"],
                 probabilities=json.loads(row["probabilities_json"] or "{}"),
+                input_features=json.loads(row["input_features_json"]) if row["input_features_json"] else None,
             )
             for row in rows
         ]

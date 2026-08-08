@@ -1,0 +1,17 @@
+# SentinelXAI — Streamlit theme (cyber-ops dark, per design system).
+# Mirrors the security-analyst palette recommended for SOC/IDS consoles:
+# near-black background, slate surfaces, green accent, red destructive.
+
+[theme]
+base = "dark"
+primaryColor = "#22C55E"
+backgroundColor = "#020617"
+secondaryBackgroundColor = "#0F172A"
+textColor = "#F8FAFC"
+font = "sans-serif"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false
